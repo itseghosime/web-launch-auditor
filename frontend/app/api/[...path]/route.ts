@@ -42,7 +42,8 @@ async function proxy(request: NextRequest, context: Context) {
     for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append("Set-Cookie", cookie);
     const retryAfter = upstream.headers.get("retry-after");
     if (retryAfter) responseHeaders.set("Retry-After", retryAfter);
-    if (path[2] === "export") responseHeaders.set("Content-Disposition", `attachment; filename="scan-${path[1]}.json"`);
+    const disposition = upstream.headers.get("content-disposition");
+    if (disposition && /^attachment; filename="[A-Za-z0-9._-]{1,128}"$/i.test(disposition)) responseHeaders.set("Content-Disposition", disposition);
     return new Response(upstream.status === 204 ? null : await upstream.text(), { status: upstream.status, headers: responseHeaders });
   } catch {
     return Response.json({ detail: "The scanner is temporarily unavailable. Please try again." }, { status: 502 });

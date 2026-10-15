@@ -13,5 +13,6 @@ data/
 node_modules/
 .next/
 playwright-report/
+design-evidence/
 test-results/
 *.tsbuildinfo

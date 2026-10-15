@@ -73,6 +73,13 @@ class ScanRequest(BaseModel):
         return public_url(value)
 
 
+def export_filename(scan):
+    """Name exports after the audited site, not the internal scan id."""
+    host = (urlsplit(scan["url"]).hostname or "").lower().removeprefix("www.")
+    stem = re.sub(r"[^a-z0-9.-]+", "-", host).strip("-.")[:60]
+    return f"{stem or 'scan'}-audit.json"
+
+
 def create_app(db_path=None, crawl_fn=None, start_worker=True):
     @asynccontextmanager
     async def lifespan(application):
@@ -171,7 +178,7 @@ def create_app(db_path=None, crawl_fn=None, start_worker=True):
             json.dumps(scan, indent=2),
             media_type="application/json",
             headers={
-                "Content-Disposition": f'attachment; filename="scan-{scan["id"]}.json"'
+                "Content-Disposition": f'attachment; filename="{export_filename(scan)}"'
             },
         )
 

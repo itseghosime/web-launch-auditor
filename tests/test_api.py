@@ -41,6 +41,17 @@ def test_complete_lifecycle(client):
     assert client.get(f"/api/scans/{scan_id}").status_code == 404
 
 
+def test_export_filename_uses_audited_site(client):
+    scan = client.post(
+        "/api/scans", json={"url": "https://www.example.com/pricing"}
+    ).json()
+    client.app.state.worker.run_once()
+    exported = client.get(f"/api/scans/{scan['id']}/export")
+    assert (
+        'filename="example.com-audit.json"' in exported.headers["content-disposition"]
+    )
+
+
 def test_session_isolates_history_detail_export_delete(client):
     scan = client.post("/api/scans", json={"url": "https://example.com"}).json()
     client.app.state.worker.run_once()
