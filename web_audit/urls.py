@@ -3,6 +3,8 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 
 def normalize_url(value: str) -> str:
     """Normalize supported URL syntax. This is not destination authorization."""
+    if len(value) > 2048:
+        raise ValueError("URLs must be at most 2048 characters.")
     value = value.strip()
     if not value or any(char.isspace() or ord(char) < 32 for char in value):
         raise ValueError("Use a non-empty URL without spaces or control characters.")

@@ -4,7 +4,9 @@ from web_audit.models import Finding, ScanReport, Severity
 from web_audit.urls import normalize_url, resolve_url, same_origin
 
 
-def inspect_html(html: str, page_url: str, source: str = "file") -> ScanReport:
+def inspect_html(
+    html: str, page_url: str, source: str = "file", *, max_links: int = 500
+) -> ScanReport:
     """Inspect one document; collect links without requesting their targets."""
     page_url = normalize_url(page_url)
     soup = BeautifulSoup(html, "html.parser")
@@ -179,7 +181,9 @@ def inspect_html(html: str, page_url: str, source: str = "file") -> ScanReport:
                 )
 
     seen = set()
-    for index, link in enumerate(soup.find_all("a", href=True), start=1):
+    for index, link in enumerate(
+        soup.find_all("a", href=True, limit=max_links), start=1
+    ):
         href = link.get("href", "").strip()
         if not href or href.startswith("#"):
             continue
