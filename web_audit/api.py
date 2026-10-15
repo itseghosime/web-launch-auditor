@@ -16,6 +16,38 @@ from web_audit.storage import QueueFull, Storage
 from web_audit.worker import Worker
 
 
+class BodyLimit:
+    """Bound API input before JSON parsing, including chunked requests."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "POST":
+            return await self.app(scope, receive, send)
+        body = bytearray()
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                return
+            body.extend(message.get("body", b""))
+            if len(body) > 4096:
+                response = Response("Request is too large", status_code=413)
+                return await response(scope, receive, send)
+            if not message.get("more_body", False):
+                break
+        sent = False
+
+        async def bounded_receive():
+            nonlocal sent
+            if not sent:
+                sent = True
+                return {"type": "http.request", "body": bytes(body), "more_body": False}
+            return await receive()
+
+        await self.app(scope, bounded_receive, send)
+
+
 class ScanRequest(BaseModel):
     url: str = Field(min_length=1, max_length=2048)
     max_pages: int = Field(default=5, ge=1, le=20)
@@ -63,6 +95,8 @@ def create_app(db_path=None, crawl_fn=None, start_worker=True):
     application = FastAPI(
         title="Web Launch Auditor", version="1.0.0", lifespan=lifespan
     )
+
+    application.add_middleware(BodyLimit)
 
     @application.middleware("http")
     async def session(request: Request, call_next):

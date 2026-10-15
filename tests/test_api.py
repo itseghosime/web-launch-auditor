@@ -88,3 +88,15 @@ def test_optional_api_key(client, monkeypatch):
         == 200
     )
     assert client.get("/health").status_code == 200
+
+
+def test_oversized_body_is_rejected_before_json_parsing(tmp_path):
+    with TestClient(
+        create_app(tmp_path / "limit.sqlite", start_worker=False)
+    ) as client:
+        response = client.post(
+            "/api/scans",
+            content=b"x" * 4097,
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 413
