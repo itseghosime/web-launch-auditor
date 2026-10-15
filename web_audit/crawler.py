@@ -78,6 +78,9 @@ def crawl(
                 elif depth >= max_depth and link not in visited:
                     stop_reason = "depth_limit"
         except (ValueError, OSError, http.client.HTTPException) as error:
+            message = str(error)
+            if "CERTIFICATE_VERIFY_FAILED" in message or "certificate verify failed" in message:
+                message = "SSL certificate could not be verified — the site may use a self-signed or expired certificate."
             result = {
                 "page_url": current,
                 "source": "url",
@@ -85,7 +88,7 @@ def crawl(
                 "findings": [],
                 "internal_links": [],
                 "redirects": [],
-                "error": str(error),
+                "error": message,
                 "depth": depth,
             }
         pages.append(result)

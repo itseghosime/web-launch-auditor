@@ -13,14 +13,14 @@ test('scan lifecycle, filters, export, retry, deletion and responsive layout', a
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'No scans yet' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pre-Flight Site Telemetry' })).toBeVisible();
+  await expect(page.getByText('Flight Logs').first()).toBeVisible();
   await page.screenshot({ path: 'design-evidence/desktop-empty.png', fullPage: true });
   await page.getByLabel('Website URL').fill('https://example.com');
   await page.getByRole('button', { name: 'Ignite Scan' }).click();
   await expect(page.getByText('Scan in progress')).toBeVisible();
   await expect(page.getByText('Missing meta description')).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('Page could not be fetched')).toBeVisible();
-  await page.getByText('Missing meta description').click();
   await expect(page.getByText('Add a unique meta description to this page.')).toBeVisible();
   await page.getByLabel('Filter by severity').selectOption('review');
   await expect(page.getByText('Missing meta description')).not.toBeVisible();
@@ -29,14 +29,14 @@ test('scan lifecycle, filters, export, retry, deletion and responsive layout', a
   const download = page.waitForEvent('download'); await page.getByRole('link', { name: 'Export JSON' }).click(); expect((await download).suggestedFilename()).toMatch(/\.json$/);
   await page.screenshot({ path: 'design-evidence/desktop-results.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole('button', { name: 'Ignite Scan' })).toBeVisible();
+  await expect(page.getByText('Flight Logs')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   await page.screenshot({ path: 'design-evidence/mobile-results.png', fullPage: true });
   await page.getByRole('button', { name: 'Run again' }).click();
   await expect(page.getByText('Scan in progress')).toBeVisible();
   await expect(page.getByText('Missing meta description')).toBeVisible({ timeout: 15000 });
   page.on('dialog', dialog => dialog.accept()); await page.getByRole('button', { name: 'Delete scan' }).click();
-  await expect(page.getByRole('heading', { name: 'No scans yet' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pre-Flight Site Telemetry' })).toBeVisible();
 });
 
 test('backend unavailable offers recovery and disables submission before session exists', async ({ page }) => {
