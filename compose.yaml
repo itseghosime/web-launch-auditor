@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: .
+    environment:
+      AUDITOR_DB_PATH: /data/scans.sqlite3
+      AUDITOR_API_KEY: ${AUDITOR_API_KEY:-}
+      AUDITOR_COOKIE_SECURE: ${AUDITOR_COOKIE_SECURE:-false}
+    volumes:
+      - scans:/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      AUDITOR_API_URL: http://backend:8000
+      AUDITOR_API_KEY: ${AUDITOR_API_KEY:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  scans:

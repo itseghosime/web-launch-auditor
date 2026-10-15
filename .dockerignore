@@ -1,0 +1,14 @@
+.git
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+**/.env
+**/.env.*
+**/node_modules
+**/.next
+**/playwright-report
+**/test-results
+data
+reports
+week1-backup

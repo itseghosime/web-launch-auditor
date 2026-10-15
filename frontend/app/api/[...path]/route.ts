@@ -1,0 +1,51 @@
+import { NextRequest } from "next/server";
+
+export const dynamic = "force-dynamic";
+type Context = { params: Promise<{ path: string[] }> };
+async function proxy(request: NextRequest, context: Context) {
+  const { path } = await context.params;
+  const valid = path[0] === "scans" && (path.length === 1 || ((path.length === 2 || (path.length === 3 && path[2] === "export")) && /^[a-zA-Z0-9-]{1,64}$/.test(path[1])));
+  if (!valid) return Response.json({ detail: "Not found" }, { status: 404 });
+  const method = request.method;
+  if ((method === "POST" && path.length !== 1) || (method === "DELETE" && path.length !== 2)) return Response.json({ detail: "Method not allowed" }, { status: 405 });
+  if (method !== "GET") {
+    const origin = request.headers.get("origin");
+    let allowed = false;
+    try { allowed = !!origin && new URL(origin).host === request.headers.get("host"); } catch { /* Invalid origins are rejected. */ }
+    if (!allowed) return Response.json({ detail: "Request origin is not allowed" }, { status: 403 });
+  }
+  try {
+    const headers = new Headers({ Accept: "application/json" });
+    const cookie = request.headers.get("cookie");
+    if (cookie) headers.set("cookie", cookie);
+    if (process.env.AUDITOR_API_KEY) headers.set("X-API-Key", process.env.AUDITOR_API_KEY);
+    let body: string | undefined;
+    if (method === "POST") {
+      const reader = request.body?.getReader();
+      const chunks: Uint8Array[] = [];
+      let length = 0;
+      if (reader) {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          length += value.byteLength;
+          if (length > 4096) { await reader.cancel(); return Response.json({ detail: "Request is too large" }, { status: 413 }); }
+          chunks.push(value);
+        }
+      }
+      body = Buffer.concat(chunks).toString("utf8");
+      headers.set("Content-Type", "application/json");
+    }
+    const base = (process.env.AUDITOR_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+    const upstream = await fetch(`${base}/api/${path.join("/")}`, { method, headers, body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000) });
+    const responseHeaders = new Headers({ "Content-Type": "application/json", "Cache-Control": "no-store" });
+    for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append("Set-Cookie", cookie);
+    const retryAfter = upstream.headers.get("retry-after");
+    if (retryAfter) responseHeaders.set("Retry-After", retryAfter);
+    if (path[2] === "export") responseHeaders.set("Content-Disposition", `attachment; filename="scan-${path[1]}.json"`);
+    return new Response(upstream.status === 204 ? null : await upstream.text(), { status: upstream.status, headers: responseHeaders });
+  } catch {
+    return Response.json({ detail: "The scanner is temporarily unavailable. Please try again." }, { status: 502 });
+  }
+}
+export { proxy as GET, proxy as POST, proxy as DELETE };
