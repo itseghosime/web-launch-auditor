@@ -22,3 +22,4 @@ export function stackDisplayName(stack?: string | null): string {
   }
   return stack.charAt(0).toUpperCase() + stack.slice(1);
 }
+

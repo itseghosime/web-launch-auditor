@@ -20,7 +20,7 @@ body {
 .launch-workspace {
   overflow: clip;
 }
-.launch-workspace .telemetry-topbar {
+.launch-workspace.is-idle .telemetry-topbar {
   padding: 22px max(32px, calc((100vw - 1280px) / 2));
   background: var(--paper);
   border-bottom: 1px solid var(--line);
@@ -29,11 +29,11 @@ body {
   flex-wrap: nowrap;
   gap: 24px;
 }
-.launch-workspace .topbar-left {
+.launch-workspace.is-idle .topbar-left {
   gap: 22px;
   flex-wrap: nowrap;
 }
-.launch-workspace .brand-link {
+.launch-workspace.is-idle .brand-link {
   font-size: 23px;
   letter-spacing: -0.9px;
   text-transform: none;
@@ -41,13 +41,10 @@ body {
   gap: 10px;
   white-space: nowrap;
 }
-.brand-light {
-  font-weight: 400;
-}
-.brand-period {
+.launch-workspace.is-idle .brand-period {
   color: var(--orange);
 }
-.launch-workspace .status-cube {
+.launch-workspace.is-idle .status-cube {
   width: 32px;
   height: 34px;
   background: var(--orange-bright);
@@ -57,11 +54,11 @@ body {
   border-radius: 8px 8px 8px 2px;
   transform: rotate(-6deg);
 }
-.launch-workspace .status-cube svg {
+.launch-workspace.is-idle .status-cube svg {
   width: 22px;
   height: 22px;
 }
-.launch-workspace .slash-badge {
+.launch-workspace.is-idle .slash-badge {
   color: #6a6e60;
   background: #e9ebdf;
   font-size: 9px;
@@ -70,7 +67,7 @@ body {
   padding: 5px 7px;
   border-radius: 4px;
 }
-.launch-workspace .modules-armed-btn {
+.launch-workspace.is-idle .modules-armed-btn {
   color: var(--muted-ink);
   font-size: 10px;
   padding: 9px 10px;
@@ -78,9 +75,72 @@ body {
   background: transparent;
   box-shadow: none;
 }
-.launch-workspace .modules-armed-btn:hover {
+.launch-workspace.is-idle .modules-armed-btn:hover {
   background: #e8eadf;
   color: var(--ink);
+}
+
+/* Active scan & results topbar (Titanium & Obsidian Luxury) */
+.launch-workspace:not(.is-idle) .telemetry-topbar {
+  padding: 12px max(24px, calc((100vw - 1280px) / 2));
+  background: #090B10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #F8FAFC;
+  min-height: 56px;
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+.launch-workspace:not(.is-idle) .brand-link {
+  font-size: 17px;
+  letter-spacing: -0.4px;
+  color: #FFFFFF;
+  gap: 8px;
+}
+.launch-workspace:not(.is-idle) .brand-period {
+  color: #38bdf8;
+}
+.launch-workspace:not(.is-idle) .status-cube {
+  width: 28px;
+  height: 28px;
+  background: #131722;
+  border: 1px solid #475569;
+  color: #34D399;
+  transform: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+.launch-workspace:not(.is-idle) .status-cube svg {
+  width: 14px;
+  height: 14px;
+}
+.launch-workspace:not(.is-idle) .slash-badge {
+  color: #94A3B8;
+  background: #131722;
+  border: 1px solid #334155;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+.launch-workspace:not(.is-idle) .modules-armed-btn {
+  color: #E2E8F0;
+  font-size: 11px;
+  padding: 6px 10px;
+  border: 1px solid #334155;
+  background: #131722;
+  border-radius: 6px;
+}
+.launch-workspace:not(.is-idle) .modules-armed-btn:hover {
+  background: #1E293B;
+  color: #FFFFFF;
+}
+.launch-workspace:not(.is-idle) .workspace-nav a,
+.launch-workspace:not(.is-idle) .workspace-nav button {
+  color: #94A3B8;
+}
+.launch-workspace:not(.is-idle) .workspace-nav a:hover,
+.launch-workspace:not(.is-idle) .workspace-nav button:hover {
+  color: #F8FAFC;
 }
 .workspace-nav {
   display: flex;
@@ -838,7 +898,7 @@ body {
   color: #8b917f;
   margin-top: 20px;
 }
-.launch-workspace .bottom-telemetry-dock {
+.launch-workspace.is-idle .bottom-telemetry-dock {
   padding: 18px 32px;
   background: var(--paper);
   color: #818775;
@@ -846,7 +906,7 @@ body {
   font-size: 8px;
   gap: 15px;
 }
-.launch-workspace .flight-recorder-trigger {
+.launch-workspace.is-idle .flight-recorder-trigger {
   color: #68705b;
   border: 0;
   box-shadow: none;
@@ -854,14 +914,40 @@ body {
   font-size: 9px;
   padding: 8px;
 }
-.launch-workspace .shortcut-legend {
+.launch-workspace.is-idle .shortcut-legend {
   font-size: 8px;
 }
-.launch-workspace .kbd-badge {
+.launch-workspace.is-idle .kbd-badge {
   background: #e9ebdf;
   color: #7d856f;
   border: 1px solid #dce0ce;
   font-size: 8px;
+}
+
+/* Active scan & results bottom dock (Titanium Obsidian) */
+.launch-workspace:not(.is-idle) .bottom-telemetry-dock {
+  padding: 10px 24px;
+  background: #090B10;
+  color: #94A3B8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  gap: 16px;
+}
+.launch-workspace:not(.is-idle) .flight-recorder-trigger {
+  color: #94A3B8;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 11px;
+}
+.launch-workspace:not(.is-idle) .flight-recorder-trigger:hover {
+  color: #F8FAFC;
+}
+.launch-workspace:not(.is-idle) .kbd-badge {
+  background: #131722;
+  color: #94A3B8;
+  border: 1px solid #334155;
+  font-size: 10px;
 }
 .launch-workspace .led-dot.emerald {
   box-shadow: none;
@@ -884,32 +970,34 @@ body {
 }
 .is-results .floating-compact-command-bar {
   max-width: 1160px;
-  border: 1px solid #30362e !important;
-  background: #151a15 !important;
-  box-shadow: 0 12px 32px #0003;
-  margin-top: 24px;
-  padding: 14px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: #0A0B0E !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  margin-top: 20px;
+  padding: 12px 18px;
 }
 .is-results .floating-right-inspector-deck {
   margin: 0 max(32px, calc((100vw - 1216px) / 2)) 0 auto;
   width: 510px;
   max-width: 510px;
   max-height: 72vh;
-  background: #141914f5;
-  border: 1px solid #353e30;
-  border-radius: 14px;
-  box-shadow: 0 18px 70px #0005;
-  padding: 26px;
+  background: rgba(13, 17, 26, 0.95);
+  border: 1px solid #334155;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  padding: 24px;
 }
 .is-results .finding-card {
-  background: #1d241d;
-  border: 1px solid #354031;
-  box-shadow: none;
+  background: #131722;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   padding: 16px;
 }
 .is-results .manifest-score-banner {
-  background: #1e281c;
-  border: 1px solid #3c4b32;
+  background: #131722;
+  border: 1px solid #334155;
+  border-radius: 12px;
   padding: 20px;
 }
 .is-results .manifest-score-banner .text-3xl {
@@ -930,20 +1018,31 @@ body {
   min-height: 38px;
 }
 .is-results .action-btn:not(.primary) {
-  background: #222a20;
-  border-color: #3b4735;
+  background: #181D2A;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+.is-results .action-btn:not(.primary):hover {
+  background: #1E293B;
+  border-color: #475569;
 }
 .is-results .dark-select {
-  font-size: 11px;
-  padding: 7px;
+  font-size: 12px;
+  padding: 6px 10px;
+  background: #0F141F;
+  color: #F8FAFC;
+  border: 1px solid #334155;
+  border-radius: 6px;
 }
 .is-results .node-inspector-pill {
-  background: #141914;
-  border: 1px solid #3c4934;
+  background: #131722;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+  bottom: 84px !important;
 }
 .is-results .physics-canvas {
-  top: 88px;
-  height: calc(100vh - 88px);
+  top: 56px;
+  height: calc(100vh - 56px);
 }
 .is-idle .alert {
   margin-bottom: 24px;
@@ -1270,7 +1369,7 @@ body {
   }
 }
 @media (max-width: 800px) {
-  .launch-workspace .telemetry-topbar {
+  .launch-workspace.is-idle .telemetry-topbar {
     padding: 16px 22px;
     min-height: 76px;
     gap: 15px;
@@ -1359,7 +1458,7 @@ body {
     row-gap: 24px;
   }
   .is-results .floating-right-inspector-deck {
-    margin: 270px auto 0;
+    margin: 360px auto 0;
     width: calc(100% - 32px);
     max-width: 640px;
     max-height: none;
@@ -1370,7 +1469,7 @@ body {
     top: 76px;
     height: 460px;
   }
-  .launch-workspace .bottom-telemetry-dock {
+  .launch-workspace.is-idle .bottom-telemetry-dock {
     padding: 15px 20px;
   }
   .shortcut-legend {
@@ -1908,21 +2007,37 @@ body {
   left: max(40px, calc((100vw - 1216px) / 2));
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #a0ad92;
+  gap: 10px;
+  color: #94A3B8;
+  font-family: var(--font-mono), monospace;
   font-size: 11px;
   pointer-events: auto;
+  z-index: 20;
+}
+.network-page-selector label {
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: 600;
 }
 .network-page-selector select {
-  background: #172012;
-  color: #d2dfc6;
-  border: 1px solid #38432f;
+  background: #131722;
+  color: #F1F5F9;
+  border: 1px solid #334155;
   border-radius: 6px;
-  padding: 8px;
-  max-width: 200px;
+  padding: 6px 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  max-width: 240px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.network-page-selector select:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 1px;
 }
 .is-results .node-inspector-pill {
-  bottom: 110px;
+  bottom: 84px !important;
 }
 @media (max-width: 800px) {
   .network-caption {
@@ -1938,10 +2053,16 @@ body {
     order: 2;
     left: auto;
     bottom: auto;
-    margin: 0 24px;
+    margin: 12px 16px;
+    justify-content: center;
   }
   .is-results .node-inspector-pill {
-    bottom: auto;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    margin: 16px auto !important;
+    width: calc(100% - 32px);
+    max-width: 480px;
   }
   .launch-workspace .modules-popover {
     left: auto;
@@ -2109,3 +2230,48 @@ html:has(.is-scanning), body:has(.is-scanning) {
   border-radius: 4px;
 }
 @media(max-width: 800px) { [data-testid="topbar-framework-badge"] { display: none; } }
+
+/* Navigation stays anchored while the landing page or report content scrolls. */
+.launch-workspace.is-idle .telemetry-topbar,
+.public-report .report-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex-shrink: 0;
+  background: var(--paper);
+}
+.launch-workspace:not(.is-idle) .telemetry-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex-shrink: 0;
+  background: #090B10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.launch-workspace #main { scroll-margin-top: 100px; }
+.feature-overview { scroll-margin-top: 110px; }
+
+@media (max-width: 800px) {
+  .is-results .floating-compact-command-bar {
+    margin: 12px 16px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .is-results .floating-compact-command-bar > div:last-child {
+    display: flex;
+    width: 100%;
+    gap: 6px;
+    align-items: center;
+  }
+  .is-results .floating-compact-command-bar input {
+    flex: 1;
+    min-width: 0;
+    width: auto !important;
+  }
+}
+
+/* Clip horizontal overflow without creating an extra vertical scroll container. */
+html, body { overflow-x: clip; }

@@ -28,10 +28,14 @@ test('scan lifecycle, filters, export, retry, deletion and responsive layout', a
   await expect(page.getByText('Review image alternative text')).toBeVisible();
   await page.getByLabel('Filter by severity').selectOption('all');
   const download = page.waitForEvent('download'); await page.getByRole('link', { name: 'Export JSON' }).click(); expect((await download).suggestedFilename()).toMatch(/\.json$/);
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(async () => (await page.locator('.telemetry-topbar').boundingBox())?.y).toBe(0);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'design-evidence/desktop-results.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByText('Flight Logs')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'design-evidence/mobile-results.png', fullPage: true });
   await page.getByRole('button', { name: 'Run again' }).click();
   await expect(page.getByText('Scan in progress')).toBeVisible();
@@ -179,6 +183,9 @@ test('public share verified report page /r/[id]', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'example.com' })).toBeVisible();
   await expect(page.getByText('92')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Audit your own site' }).last()).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expect.poll(async () => (await page.locator('.report-header').boundingBox())?.y).toBe(0);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: 'design-evidence/public-report.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
@@ -196,6 +203,8 @@ test('mobile launch workspace, preview interaction, history and keyboard navigat
   await page.getByRole('button', { name: 'LinkedIn', exact: true }).click();
   await expect(page.getByRole('button', { name: 'LinkedIn', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByText('Explore the checks', { exact: true }).first().click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await expect.poll(async () => (await page.locator('.telemetry-topbar').boundingBox())?.y).toBe(0);
   await expect(page.getByText('Preview X, LinkedIn, WhatsApp, and iMessage cards', { exact: false })).toBeVisible();
   await page.keyboard.press('/');
   await expect(page.getByLabel('Website URL')).toBeFocused();

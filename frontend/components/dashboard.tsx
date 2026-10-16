@@ -1250,7 +1250,8 @@ export default function Dashboard() {
                       fontSize: "0.72rem",
                       fontFamily: "var(--font-mono), monospace",
                       color: "#fff",
-                      width: "185px",
+                      minWidth: "140px",
+                      flex: 1,
                     }}
                   />
                   <button
