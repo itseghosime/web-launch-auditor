@@ -48,3 +48,9 @@ Not implemented by this design work: browser extension, companion CLI, scheduled
 Browser tests use controlled API responses and capture artifacts in `frontend/design-evidence/`. They cover the scan lifecycle, filtering, export, retry/deletion, backend recovery, localhost help, social tabs, prompt copying, report sharing, public reports, mobile layout, keyboard interaction, network animation after completion, and reduced motion. Screenshots are local review artifacts and ignored by git.
 
 Production build and TypeScript checks are required. Backend fixture tests guard the preserved scanner behavior. Live external crawling and production deployment are separate from these controlled browser checks.
+
+## Viewport-sized scanning workspace
+
+Active scans use a fixed `100dvh` workspace (`100vh` fallback), with header, bounded main area, and footer. Document scrolling is disabled only while scanning. The animated network remains visible, and the live log shows its three latest entries without an inner scrollbar. Completed reports retain the separate findings/social views and paginated findings.
+
+Verified at 1440×900, 390×844, 390×667, and 844×390: the workspace equals the viewport height, the header spans its width, toolbar/inspector/footer fit vertically, and wheel input leaves document scroll at zero. Nine browser tests passed; the full-width adjustment was subsequently rechecked by the viewport test. TypeScript and production build passed.

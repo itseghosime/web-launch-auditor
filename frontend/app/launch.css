@@ -2006,3 +2006,106 @@ body {
 .is-results .floating-compact-command-bar { flex-shrink: 0; }
 .is-results .floating-right-inspector-deck .finding-card { margin-bottom: 10px; }
 .is-results .manifest-score-banner { padding: 16px 18px; }
+
+/* A scan is a viewport-sized workspace, with a rolling log instead of scrollbars. */
+html:has(.is-scanning), body:has(.is-scanning) {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.launch-workspace.is-scanning {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.is-scanning .telemetry-topbar { grid-row: 1; }
+.is-scanning .center-stage-wrap { grid-row: 2; min-height: 0; height: 100%; overflow: hidden; }
+.is-scanning .bottom-telemetry-dock { grid-row: 3; min-height: 44px; padding-block: 10px; }
+.is-scanning .active-hud-stage {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 20px;
+  padding: 0 0 20px;
+}
+.is-scanning .floating-compact-command-bar { grid-row: 1; margin-top: 20px; }
+.is-scanning .floating-right-inspector-deck {
+  grid-row: 2;
+  align-self: center;
+  height: min(360px, 100%);
+  min-height: 0;
+  max-height: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+.live-scan-panel { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.live-scan-panel>div:first-child { flex-shrink: 0; }
+.is-scanning .terminal-log-row { min-height: 0; font-size: 12px; padding: 10px; }
+.is-scanning .terminal-log-row>span:last-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.is-scanning .network-page-selector, .is-scanning .node-inspector-pill { display: none; }
+.is-scanning .alert { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); }
+@media(max-width: 800px) {
+  .is-scanning .active-hud-stage { grid-template-rows: auto minmax(60px, 1fr) minmax(0, 210px); gap: 12px; padding-bottom: 12px; }
+  .is-scanning .floating-compact-command-bar { margin-top: 12px; }
+  .is-scanning .floating-right-inspector-deck { grid-row: 3; height: 100%; width: calc(100% - 32px); margin: 0 auto; padding: 16px; }
+  .is-scanning .network-caption { display: none; }
+  .is-scanning .physics-canvas { position: fixed; top: 200px; height: max(100px, calc(100dvh - 500px)); }
+  .is-scanning .bottom-telemetry-dock>div:first-child, .is-scanning .shortcut-legend { display: none; }
+  .is-scanning .terminal-log-row { font-size: 11px; padding: 7px; }
+}
+@media(max-height: 600px) {
+  .is-scanning .telemetry-topbar { min-height: 56px; padding-block: 10px; }
+  .is-scanning .floating-compact-command-bar { margin-top: 8px; padding-block: 8px; }
+  .is-scanning .active-hud-stage { gap: 8px; padding-bottom: 8px; }
+  .is-scanning .floating-right-inspector-deck { padding: 12px; }
+  .is-scanning .terminal-log-row { padding: 5px; font-size: 10px; }
+}
+.is-scanning { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }
+.is-scanning .active-hud-stage { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }
+.is-scanning .telemetry-topbar, .is-scanning .center-stage-wrap, .is-scanning .bottom-telemetry-dock { grid-column: 1; width: 100%; }
+@media(max-width: 800px) {
+  .is-scanning .bottom-telemetry-dock>div:first-child, .is-scanning .shortcut-legend { display: none !important; }
+}
+
+.framework-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.framework-badge > svg { color: #38bdf8; flex-shrink: 0; }
+.framework-badge > span { color: #94a3b8; font-weight: 500; }
+.framework-badge > strong { color: #f8fafc; font-weight: 600; overflow-wrap: anywhere; }
+@media(max-width: 480px) {
+  .framework-badge { font-size: 10px; padding: 3px 6px; }
+}
+[data-testid="topbar-framework-badge"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 7px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 4px;
+}
+@media(max-width: 800px) { [data-testid="topbar-framework-badge"] { display: none; } }

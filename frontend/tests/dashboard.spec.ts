@@ -21,6 +21,7 @@ test('scan lifecycle, filters, export, retry, deletion and responsive layout', a
   await expect(page.getByText('Scan in progress')).toBeVisible();
   await expect(page.getByText('Missing meta description')).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('Page could not be fetched')).toBeVisible();
+  await expect(page.getByRole('status', { name: 'Framework: Not identified', exact: true })).toBeVisible();
   await expect(page.getByText('Add a unique meta description to this page.')).toBeVisible();
   await page.getByLabel('Filter by severity').selectOption('review');
   await expect(page.getByText('Missing meta description')).not.toBeVisible();
@@ -70,7 +71,7 @@ test('social card simulator, AI prompt copy, delta score, and share modal', asyn
     ...completed,
     id: 'scan-share-1',
     score: 88,
-    stack: 'Next.js',
+    stack: 'nextjs',
     ai_prompt: 'Fix missing description in layout.tsx',
     pages: [
       {
@@ -116,6 +117,7 @@ test('social card simulator, AI prompt copy, delta score, and share modal', asyn
   await page.goto('/');
   await page.getByLabel('Website URL').fill('https://example.com');
   await page.getByRole('button', { name: 'Audit my site' }).click();
+  await expect(page.getByRole('status', { name: 'Framework: Next.js', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Social previews', exact: true }).click();
   await expect(page.getByText('SOCIAL CARD SIMULATOR')).toBeVisible({ timeout: 10000 });
   await expect(page.getByText('Naked Link Alert — No og:image found for X (Twitter)')).toBeVisible();
@@ -248,4 +250,34 @@ test('expired public report offers a route back to the auditor', async ({ page }
   await expect(page.getByRole('heading', { name: 'Report not found or expired.' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Audit your own site' })).toHaveAttribute('href', '/');
   await page.screenshot({ path: 'design-evidence/report-expired.png', fullPage: true });
+});
+
+test('scanning fits the viewport without document scrolling on desktop and mobile', async ({ page }) => {
+  let submitted = false;
+  const running = { ...completed, status: 'running', pages: completed.pages, pages_scanned: 2 };
+  await page.route('**/api/scans**', route => {
+    if (route.request().method() === 'POST') { submitted = true; return route.fulfill({ status: 202, json: running }); }
+    return route.fulfill({ json: new URL(route.request().url()).pathname === '/api/scans' ? { items: submitted ? [running] : [] } : running });
+  });
+  await page.goto('/');
+  // Enter scanning after scrolling the landing page: no inherited scroll offset.
+  await page.getByLabel('Website URL').fill('https://example.com');
+  await page.getByRole('button', { name: 'Audit my site' }).click();
+  await expect(page.getByText('Scan in progress', { exact: false })).toBeVisible();
+  for (const [width, height] of [[1440, 900], [390, 844], [390, 667], [844, 390]]) {
+    await page.setViewportSize({ width, height });
+    await expect(page.getByRole('status', { name: 'Framework: Detecting…', exact: true })).toBeVisible();
+    await expect(page.locator('.is-scanning')).toHaveCSS('height', `${height}px`);
+    await expect(page.locator(".telemetry-topbar")).toHaveCSS("width", `${width}px`);
+    await page.mouse.wheel(0, 800);
+    expect(await page.evaluate(() => ({ scroll: window.scrollY, fits: document.documentElement.scrollHeight <= innerHeight }))).toEqual({ scroll: 0, fits: true });
+    for (const selector of ['.telemetry-topbar', '.floating-compact-command-bar', '.floating-right-inspector-deck', '.bottom-telemetry-dock']) {
+      const box = await page.locator(selector).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(height + 1);
+    }
+    await expect(page.locator('canvas')).toBeVisible();
+    await page.screenshot({ path: `design-evidence/scanning-${width}x${height}.png` });
+  }
 });

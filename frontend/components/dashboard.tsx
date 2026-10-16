@@ -34,6 +34,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { stackDisplayName } from "./stack";
+export { stackDisplayName };
 
 type Finding = {
   rule: string;
@@ -81,6 +83,20 @@ type Scan = {
 };
 
 type Vibe = "gentle" | "strict" | "roast";
+
+function FrameworkBadge({ scan }: { scan: Scan | null }) {
+  const pending = scan?.status === "queued" || scan?.status === "running";
+  const stack = scan?.stack?.trim();
+  const detected = stack && stack.toLowerCase() !== "html";
+  const label = pending ? "Detecting…" : detected
+    ? stackDisplayName(stack)
+    : scan?.status === "failed" ? "Unavailable" : "Not identified";
+  return <span className="framework-badge" role="status" aria-label={`Framework: ${label}`}
+    title={pending ? "Framework detection completes with the audit." : detected ? "Detected from the website’s HTML and response headers." : "No recognizable framework signature was found. This does not mean the site uses no framework."}>
+    <Layers size={13} aria-hidden="true" /><span>Framework</span><strong>{label}</strong>
+  </span>;
+}
+
 
 const active = (s: Scan) => s.status === "queued" || s.status === "running";
 const hostOf = (url: string) => {
@@ -753,7 +769,7 @@ export default function Dashboard() {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className={`obsidian-root launch-workspace ${isIdle ? "is-idle" : "is-results"}`}>
+    <div className={`obsidian-root launch-workspace ${isIdle ? "is-idle" : "is-results"} ${isActive ? "is-scanning" : ""}`} >
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -798,6 +814,15 @@ export default function Dashboard() {
             {isLocalRelay && (
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium tracking-wide bg-amber-500/15 border border-amber-500/30 text-amber-300">
                 [LOCAL RELAY]
+              </span>
+            )}
+            {!isActive && currentScan?.stack && currentScan.stack.toLowerCase() !== "html" && (
+              <span
+                data-testid="topbar-framework-badge"
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium tracking-wide bg-cyan-500/10 border border-cyan-500/30 text-cyan-300"
+              >
+                <Layers size={11} className="text-cyan-400" />
+                <span>{stackDisplayName(currentScan.stack).toUpperCase()}</span>
               </span>
             )}
           </a>
@@ -1151,6 +1176,8 @@ export default function Dashboard() {
                     display: "flex",
                     alignItems: "center",
                     gap: "0.55rem",
+                    flexWrap: "wrap",
+                    minWidth: 0,
                     fontFamily: "var(--font-mono), monospace",
                     fontSize: "0.72rem",
                   }}
@@ -1198,6 +1225,7 @@ export default function Dashboard() {
                           } PAGES LOCKED`}
                     </span>
                   )}
+                  <FrameworkBadge scan={currentScan} />
                 </div>
 
                 <div
@@ -1257,12 +1285,7 @@ export default function Dashboard() {
                 className="floating-right-inspector-deck w-full max-w-[420px] mr-6 my-auto bg-[#0A0B0E]/85 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-6 z-20 shadow-2xl"
               >
                 {isActive ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      minHeight: "340px",
-                    }}
+                  <div className="live-scan-panel"
                   >
                     <div
                       style={{
@@ -1288,7 +1311,7 @@ export default function Dashboard() {
                         <span className="led-dot emerald" aria-hidden="true" />
                         <span>LIVE TELEMETRY // {vibe.toUpperCase()}</span>
                       </span>
-                      <span style={{ color: "#71717A" }}>60FPS STREAM</span>
+                      <span style={{ color: "#a1ad98" }}>LIVE</span>
                     </div>
                     <TerminalStream
                       scan={currentScan}
@@ -1467,6 +1490,18 @@ export default function Dashboard() {
                             {findings.length === 0
                               ? "Cleared for Launch"
                               : `${findings.length} Telemetry Anomalies`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span
+                            data-testid="manifest-framework-badge"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-medium bg-cyan-500/10 border border-cyan-500/30 text-cyan-300"
+                          >
+                            <Layers size={12} className="text-cyan-400" />
+                            <span className="text-slate-400">FRAMEWORK:</span>
+                            <span className="text-white font-semibold">
+                              {!currentScan?.stack || currentScan.stack.toLowerCase() === "html" ? "Not identified" : stackDisplayName(currentScan.stack)}
+                            </span>
                           </span>
                         </div>
                       </div>
@@ -2315,7 +2350,7 @@ export default function Dashboard() {
 
                           {s.stack && (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/5 border border-white/10 text-slate-300 flex-shrink-0">
-                              {s.stack}
+                              {stackDisplayName(s.stack)}
                             </span>
                           )}
 
@@ -2811,7 +2846,7 @@ function ViewportPhysicsCanvas({
     const w = bounds?.width || 1440;
     const h = bounds?.height || 812;
     const anchorX = w <= 800 ? w * 0.5 : w * 0.30;
-    const anchorY = w <= 800 ? 270 : h * 0.5;
+    const anchorY = w <= 800 ? Math.min(270, h * 0.55) : h * 0.5;
 
     const pages = scan?.pages ?? [];
 
@@ -2841,7 +2876,7 @@ function ViewportPhysicsCanvas({
     pages.forEach((p, idx) => {
       const u = p.page_url || p.source || `page-${idx}`;
       const angle = (idx / count) * Math.PI * 2 - Math.PI / 2;
-      const orbit = w <= 800 ? 75 + (idx % 2) * 15 : 145 + (idx % 2) * 48;
+      const orbit = w <= 800 ? Math.min(75, h * 0.22) + (idx % 2) * 15 : 145 + (idx % 2) * 48;
       const tx = anchorX + Math.cos(angle) * orbit;
       const ty = anchorY + Math.sin(angle) * orbit;
       const isErr =
@@ -2921,13 +2956,13 @@ function ViewportPhysicsCanvas({
       const nodes = simNodesRef.current;
       if (nodes.length > 0) {
         const ax = width <= 800 ? width * 0.5 : width * 0.30;
-        const ay = width <= 800 ? 270 : height * 0.5;
+        const ay = width <= 800 ? Math.min(270, height * 0.55) : height * 0.5;
         nodes[0].targetX = ax;
         nodes[0].targetY = ay;
         const childCount = Math.max(nodes.length - 1, 1);
         for (let i = 1; i < nodes.length; i++) {
           const angle = ((i - 1) / childCount) * Math.PI * 2 - Math.PI / 2;
-          const orbit = width <= 800 ? 75 + ((i - 1) % 2) * 15 : 145 + ((i - 1) % 2) * 48;
+          const orbit = width <= 800 ? Math.min(75, height * 0.22) + ((i - 1) % 2) * 15 : 145 + ((i - 1) % 2) * 48;
           nodes[i].targetX = ax + Math.cos(angle) * orbit;
           nodes[i].targetY = ay + Math.sin(angle) * orbit;
         }
@@ -3181,7 +3216,7 @@ function ViewportPhysicsCanvas({
         // Viewport boundaries: keep nodes safely in view avoiding overlays
         const minX = 70;
         const maxX = width <= 800 ? width - 55 : Math.max(200, width - 570);
-        const minY = width <= 800 ? 170 : 85;
+        const minY = width <= 800 ? Math.min(170, height * 0.2) : 85;
         const maxY = height - 40;
 
         for (let i = 0; i < nodes.length; i++) {
@@ -3409,13 +3444,14 @@ function TerminalStream({
       ref={containerRef}
       style={{
         flex: 1,
-        overflowY: "auto",
+        overflow: "hidden",
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         gap: "0.4rem",
       }}
     >
-      {lines.map((line, i) => {
+      {lines.slice(-3).map((line, i) => {
         const isErr =
           line.includes("REFUSED") ||
           line.includes("rejected") ||
@@ -3433,7 +3469,7 @@ function TerminalStream({
               aria-hidden="true"
             />
             <span style={{ color: "#71717A", fontSize: "0.66rem" }}>
-              {String(i + 1).padStart(2, "0")}
+              {String(Math.max(0, lines.length - 3) + i + 1).padStart(2, "0")}
             </span>
             <span style={{ flex: 1 }}>{line}</span>
           </div>
