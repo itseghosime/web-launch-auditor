@@ -4,8 +4,9 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ path: string[] }> };
 async function proxy(request: NextRequest, context: Context) {
   const { path } = await context.params;
-  const valid = path[0] === "scans" && (path.length === 1 || ((path.length === 2 || (path.length === 3 && path[2] === "export")) && /^[a-zA-Z0-9-]{1,64}$/.test(path[1])));
-  if (!valid) return Response.json({ detail: "Not found" }, { status: 404 });
+  const valid =
+    (path[0] === "scans" && (path.length === 1 || ((path.length === 2 || (path.length === 3 && path[2] === "export")) && /^[a-zA-Z0-9-]{1,64}$/.test(path[1])))) ||
+    (path[0] === "analyze-raw-html" && path.length === 1);  if (!valid) return Response.json({ detail: "Not found" }, { status: 404 });
   const method = request.method;
   if ((method === "POST" && path.length !== 1) || (method === "DELETE" && path.length !== 2)) return Response.json({ detail: "Method not allowed" }, { status: 405 });
   if (method !== "GET") {
@@ -29,8 +30,8 @@ async function proxy(request: NextRequest, context: Context) {
           const { value, done } = await reader.read();
           if (done) break;
           length += value.byteLength;
-          if (length > 4096) { await reader.cancel(); return Response.json({ detail: "Request is too large" }, { status: 413 }); }
-          chunks.push(value);
+          const cap = path[0] === "analyze-raw-html" ? 1100000 : 4096;
+          if (length > cap) { await reader.cancel(); return Response.json({ detail: "Request is too large" }, { status: 413 }); }          chunks.push(value);
         }
       }
       body = Buffer.concat(chunks).toString("utf8");

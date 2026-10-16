@@ -113,6 +113,38 @@ class Storage:
             ).fetchall()
         return [self.serialize(row, detail=False) for row in rows]
 
+    def create_completed(self, owner, url, max_pages, max_depth, result):
+        pages = (result or {}).get("pages", [])
+        scan_id, timestamp = uuid.uuid4().hex, now()
+        with self.connect() as db:
+            db.execute(
+                """INSERT INTO scans
+                (id,owner,url,status,created_at,updated_at,max_pages,max_depth,
+                 pages,error,stop_reason,pages_scanned,findings_count,
+                 score,stack,source,ai_prompt)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?, ?,?,?,?,?,?)""",
+                (
+                    scan_id,
+                    owner,
+                    url,
+                    "completed",
+                    timestamp,
+                    timestamp,
+                    max_pages,
+                    max_depth,
+                    json.dumps(pages),
+                    None,
+                    result.get("stop_reason") if result else None,
+                    len(pages),
+                    sum(len(p.get("findings", [])) for p in pages),
+                    result.get("score", 0),
+                    result.get("stack", "html"),
+                    result.get("source", "relay"),
+                    result.get("ai_prompt", ""),
+                ),
+            )
+        return self.get(scan_id, owner)
+
     def delete(self, scan_id, owner):
         with self.connect() as db:
             return (

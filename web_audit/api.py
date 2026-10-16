@@ -11,7 +11,11 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
+from web_audit.ai_prompt import build_ai_fix_prompt
+from web_audit.checks import inspect_html
 from web_audit.safe_fetch import public_url
+from web_audit.scoring import compute_scan_score
+from web_audit.stack import detect_stack
 from web_audit.storage import QueueFull, Storage
 from web_audit.worker import Worker
 
@@ -25,13 +29,18 @@ class BodyLimit:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http" or scope["method"] != "POST":
             return await self.app(scope, receive, send)
+        limit = (
+            1_100_000
+            if scope.get("path", "").startswith("/api/analyze-raw-html")
+            else 4096
+        )
         body = bytearray()
         while True:
             message = await receive()
             if message["type"] == "http.disconnect":
                 return
             body.extend(message.get("body", b""))
-            if len(body) > 4096:
+            if len(body) > limit:
                 response = Response("Request is too large", status_code=413)
                 return await response(scope, receive, send)
             if not message.get("more_body", False):
@@ -170,6 +179,71 @@ def create_app(db_path=None, crawl_fn=None, start_worker=True):
             raise HTTPException(409, "Wait for this scan to finish before deleting it")
         request.app.state.storage.delete(scan_id, request.state.owner)
         return Response(status_code=204)
+
+    class RelayPage(BaseModel):
+        url: str = Field(min_length=1)
+        status: int = 200
+        html: str = Field(min_length=1, max_length=1_000_000)
+
+    class RelayRequest(BaseModel):
+        url: str = Field(min_length=1, max_length=2048)
+        pages: list[RelayPage] = Field(min_length=1, max_length=20)
+        max_pages: int = Field(default=5, ge=1, le=20)
+        max_depth: int = Field(default=1, ge=0, le=3)
+
+        @field_validator("url")
+        @classmethod
+        def validate_url(cls, value):
+            return value.strip()
+
+    @application.post("/api/analyze-raw-html", status_code=201)
+    def analyze_raw_html(body: RelayRequest, request: Request):
+        url = body.url
+        processed_pages = []
+        for rp in body.pages:
+            page_url = rp.url
+            if "<" not in rp.html:
+                raise HTTPException(400, "HTML content required")
+            report = inspect_html(rp.html, page_url, source="relay")
+            result = {
+                "page_url": report.page_url,
+                "source": "relay",
+                "status_code": rp.status,
+                "findings": [
+                    f.__dict__ if hasattr(f, "__dict__") else f for f in report.findings
+                ],
+                "internal_links": report.internal_links,
+                "redirects": [],
+                "error": None,
+                "depth": 0,
+            }
+            if getattr(report, "social_preview", None) is not None:
+                result["social_preview"] = report.social_preview
+            processed_pages.append(result)
+        stack = detect_stack(body.pages[0].html if body.pages else "", None)
+        score = compute_scan_score(processed_pages)
+        scan_like = {
+            "url": url,
+            "pages": processed_pages,
+            "stack": stack,
+            "score": score,
+        }
+        ai_prompt = build_ai_fix_prompt(scan_like)
+        stored = request.app.state.storage.create_completed(
+            request.state.owner,
+            url,
+            body.max_pages,
+            body.max_depth,
+            {
+                "pages": processed_pages,
+                "stop_reason": "relay",
+                "score": score,
+                "stack": stack,
+                "source": "relay",
+                "ai_prompt": ai_prompt,
+            },
+        )
+        return stored
 
     @application.get("/api/scans/{scan_id}/export")
     def export(scan_id: str, request: Request):
