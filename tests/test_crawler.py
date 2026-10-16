@@ -132,7 +132,8 @@ def test_depth_zero_and_page_failure():
 
 def test_deadline_stops_work():
     result = crawl("https://example.com", fetcher=lambda url: None, max_seconds=0)
-    assert result == {"pages": [], "stop_reason": "deadline"}
+    assert result["pages"] == []
+    assert result["stop_reason"] == "deadline"
 
 
 def test_robots_disallow_is_non_blocking(monkeypatch):

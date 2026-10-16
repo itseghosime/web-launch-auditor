@@ -21,8 +21,11 @@ try:
 except ImportError:
     _CERTIFI_CAFILE = None
 
+from web_audit.ai_prompt import build_ai_fix_prompt
 from web_audit.checks import inspect_html
 from web_audit.safe_fetch import USER_AGENT, PublicFetcher, public_url
+from web_audit.scoring import compute_scan_score
+from web_audit.stack import detect_stack
 from web_audit.urls import is_canonical_origin_redirect
 
 
@@ -142,6 +145,7 @@ def crawl(
     visited = set()
     pages = []
     stop_reason = "finished"
+    first_html = None
     while pending and len(pages) < max_pages:
         if time.monotonic() >= deadline:
             stop_reason = "deadline"
@@ -178,6 +182,8 @@ def crawl(
             if not is_canonical_origin_redirect(effective_origin, page.url):
                 raise ValueError("Page left the original website.")
             visited.add(page.url)
+            if first_html is None:
+                first_html = page.html
             report = inspect_html(page.html, page.url, source="url", max_links=500)
             report.status_code = page.status_code
             report.redirects = page.redirects
@@ -260,4 +266,15 @@ def crawl(
             time.sleep(min(delay, max(0, deadline - time.monotonic())))
     if pending and len(pages) >= max_pages:
         stop_reason = "page_limit"
-    return {"pages": pages, "stop_reason": stop_reason}
+    stack = detect_stack(first_html) if first_html else "html"
+    score = compute_scan_score(pages)
+    scan = {"url": effective_origin, "pages": pages, "stack": stack, "score": score}
+    ai_prompt = build_ai_fix_prompt(scan)
+    return {
+        "pages": pages,
+        "stop_reason": stop_reason,
+        "score": score,
+        "stack": stack,
+        "source": "crawler",
+        "ai_prompt": ai_prompt,
+    }

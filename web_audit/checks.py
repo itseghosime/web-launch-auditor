@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from bs4 import BeautifulSoup
 
 from web_audit.models import Finding, ScanReport, Severity
@@ -205,5 +207,106 @@ def inspect_html(
         if same_origin(page_url, target) and target not in seen:
             seen.add(target)
             report.internal_links.append(target)
+
+    base_host = urlsplit(page_url).hostname or ""
+    is_local_target = base_host in {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    } or base_host.endswith(".local")
+    leak_tokens = ("localhost", "127.0.0.1", "0.0.0.0")
+    if not is_local_target:
+        for tag in soup.find_all(src=True):
+            src = str(tag.get("src", "")).lower()
+            if any(token in src for token in leak_tokens):
+                add(
+                    "localhost.leak",
+                    "secrets",
+                    "Localhost reference leaked in a production asset src.",
+                    f"src={src}",
+                    "Replace the localhost URL with a production endpoint.",
+                    "warning",
+                )
+        for tag in soup.find_all(href=True):
+            href = str(tag.get("href", "")).lower()
+            if any(token in href for token in leak_tokens):
+                add(
+                    "localhost.leak",
+                    "secrets",
+                    "Localhost reference leaked in a production link.",
+                    f"href={href}",
+                    "Replace the localhost URL with a production endpoint.",
+                    "warning",
+                )
+
+    text_blob = " ".join(soup.find_all(string=True)).lower()
+    title_text = (title.get_text(" ", strip=True) if title else "").lower()
+    combined = text_blob + " " + title_text
+    for needle in ("lorem ipsum", "todo:", "fixme:", "create next app", "vite + react"):
+        if needle in combined:
+            add(
+                "placeholder.text",
+                "secrets",
+                "Placeholder or scaffolding text found.",
+                f" Matched '{needle}'.",
+                "Replace placeholder text with production content.",
+                "warning",
+            )
+            break
+    for script in soup.find_all("script"):
+        text = script.get_text(strip=True)
+        src = script.get("src", "")
+        if (
+            src and str(src).lower().endswith(".map")
+        ) or "sourcemapurl" in text.lower():
+            add(
+                "sourcemap.exposed",
+                "secrets",
+                "Source map reference exposed in production HTML.",
+                f"script src={src}",
+                "Remove sourceMappingURL hints and .map references before shipping.",
+                "warning",
+            )
+            break
+    for anchor in soup.find_all("a", href=True):
+        raw = anchor.get("href", "").strip()
+        lowered = raw.lower()
+        if lowered in {"#", "javascript:void(0)", "javascript:void(0);", ""}:
+            if not (anchor.get("role") == "button" or anchor.get("onclick")):
+                add(
+                    "link.dead_button",
+                    "links",
+                    "Empty or dead anchor detected.",
+                    f"href={raw}",
+                    "Use a <button> for actions or a valid href.",
+                    "review",
+                )
+                break
+        if lowered.startswith("mailto:") and "@" not in raw.split(":", 1)[-1]:
+            add(
+                "link.dead_button",
+                "links",
+                "Malformed mailto link detected.",
+                f"href={raw}",
+                "Fix the mailto: address.",
+                "review",
+            )
+            break
+
+    def _meta_content(prop=None, name=None):
+        tag = None
+        if prop:
+            tag = soup.find("meta", attrs={"property": prop})
+        if tag is None and name:
+            tag = soup.find("meta", attrs={"name": name})
+        return tag.get("content", "").strip() if tag is not None else ""
+
+    report.social_preview = {
+        "title": _meta_content("og:title")
+        or (title.get_text(strip=True) if title else ""),
+        "description": _meta_content("og:description"),
+        "image": _meta_content("og:image"),
+        "site_name": _meta_content("og:site_name"),
+    }
 
     return report

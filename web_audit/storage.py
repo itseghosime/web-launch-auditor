@@ -29,7 +29,21 @@ class Storage:
                 updated_at TEXT NOT NULL, max_pages INTEGER NOT NULL,
                 max_depth INTEGER NOT NULL, pages TEXT NOT NULL DEFAULT '[]',
                 error TEXT, stop_reason TEXT, pages_scanned INTEGER NOT NULL DEFAULT 0,
-                findings_count INTEGER NOT NULL DEFAULT 0)""")
+                findings_count INTEGER NOT NULL DEFAULT 0,
+                score INTEGER NOT NULL DEFAULT 0,
+                stack TEXT NOT NULL DEFAULT 'html',
+                source TEXT NOT NULL DEFAULT 'crawler',
+                ai_prompt TEXT NOT NULL DEFAULT '')""")
+            for col, decl in (
+                ("score", "INTEGER NOT NULL DEFAULT 0"),
+                ("stack", "TEXT NOT NULL DEFAULT 'html'"),
+                ("source", "TEXT NOT NULL DEFAULT 'crawler'"),
+                ("ai_prompt", "TEXT NOT NULL DEFAULT ''"),
+            ):
+                try:
+                    db.execute(f"ALTER TABLE scans ADD COLUMN {col} {decl}")
+                except sqlite3.OperationalError:
+                    pass
             db.execute("CREATE INDEX IF NOT EXISTS scan_owner ON scans(owner)")
             db.execute(
                 "CREATE TABLE IF NOT EXISTS admissions (created_at REAL NOT NULL)"
@@ -93,7 +107,7 @@ class Storage:
         with self.connect() as db:
             rows = db.execute(
                 "SELECT id,url,status,created_at,updated_at,max_pages,max_depth,error,"
-                "stop_reason,pages_scanned,findings_count FROM scans WHERE owner=? "
+                "stop_reason,pages_scanned,findings_count,score,stack,source FROM scans WHERE owner=? "
                 "ORDER BY created_at DESC LIMIT 100",
                 (owner,),
             ).fetchall()
@@ -153,7 +167,7 @@ class Storage:
         with self.connect() as db:
             db.execute(
                 """UPDATE scans SET status=?,pages=?,error=?,stop_reason=?,updated_at=?,
-                pages_scanned=?,findings_count=? WHERE id=?""",
+                pages_scanned=?,findings_count=?,score=?,stack=?,source=?,ai_prompt=? WHERE id=?""",
                 (
                     "failed" if error else "completed",
                     json.dumps(pages),
@@ -162,6 +176,10 @@ class Storage:
                     now(),
                     len(pages),
                     sum(len(page.get("findings", [])) for page in pages),
+                    result.get("score", 0),
+                    result.get("stack", "html"),
+                    result.get("source", "crawler"),
+                    result.get("ai_prompt", ""),
                     scan_id,
                 ),
             )
