@@ -146,6 +146,7 @@ def crawl(
     pages = []
     stop_reason = "finished"
     first_html = None
+    first_headers = None
     while pending and len(pages) < max_pages:
         if time.monotonic() >= deadline:
             stop_reason = "deadline"
@@ -184,6 +185,7 @@ def crawl(
             visited.add(page.url)
             if first_html is None:
                 first_html = page.html
+                first_headers = getattr(page, "headers", None)
             report = inspect_html(page.html, page.url, source="url", max_links=500)
             report.status_code = page.status_code
             report.redirects = page.redirects
@@ -266,7 +268,7 @@ def crawl(
             time.sleep(min(delay, max(0, deadline - time.monotonic())))
     if pending and len(pages) >= max_pages:
         stop_reason = "page_limit"
-    stack = detect_stack(first_html) if first_html else "html"
+    stack = detect_stack(first_html, first_headers) if first_html else "html"
     score = compute_scan_score(pages)
     scan = {"url": effective_origin, "pages": pages, "stack": stack, "score": score}
     ai_prompt = build_ai_fix_prompt(scan)

@@ -35,6 +35,30 @@ def test_fallback_html():
     assert detect_stack("<html><body>hi</body></html>") == "html"
 
 
+def test_detect_nextjs_header():
+    assert detect_stack("", {"X-Powered-By": "Next.js"}) == "nextjs"
+
+
+def test_detect_nextjs_app_router():
+    html = '<script src="/_next/static/chunks/app/layout.js"></script>'
+    assert detect_stack(html) == "nextjs"
+
+
+def test_detect_nuxt():
+    html = '<div id="__nuxt"></div>'
+    assert detect_stack(html) == "nuxt"
+
+
+def test_detect_sveltekit():
+    html = '<body data-sveltekit-preload-data="hover">'
+    assert detect_stack(html) == "sveltekit"
+
+
+def test_detect_shopify():
+    html = '<script src="https://cdn.shopify.com/s/files/1/00/theme.js"></script>'
+    assert detect_stack(html) == "shopify"
+
+
 def test_recommendation():
     assert "app/layout.tsx" in get_stack_recommendation(
         "og:image.missing", "nextjs", "add image"

@@ -27,6 +27,7 @@ class FetchedPage:
     status_code: int
     html: str
     redirects: list[Redirect] = field(default_factory=list)
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

@@ -47,4 +47,10 @@ def fetch_page(
                 if len(body) > max_bytes:
                     raise ValueError("HTML exceeds the configured byte limit.")
             html = bytes(body).decode(response.encoding or "utf-8", errors="replace")
-            return FetchedPage(current, response.status_code, html, redirects)
+            return FetchedPage(
+                current,
+                response.status_code,
+                html,
+                redirects,
+                headers=dict(response.headers) if hasattr(response, "headers") else {},
+            )

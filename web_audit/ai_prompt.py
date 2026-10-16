@@ -7,6 +7,12 @@ STACK_LABELS = {
     "vite": "Vite",
     "wordpress": "WordPress",
     "webflow": "Webflow",
+    "nuxt": "Nuxt",
+    "sveltekit": "SvelteKit",
+    "gatsby": "Gatsby",
+    "shopify": "Shopify",
+    "squarespace": "Squarespace",
+    "wix": "Wix",
     "html": "HTML",
 }
 

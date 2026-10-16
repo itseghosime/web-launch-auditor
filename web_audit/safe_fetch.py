@@ -368,7 +368,9 @@ class PublicFetcher:
         from bs4 import UnicodeDammit
 
         html = UnicodeDammit(body, is_html=True).unicode_markup or ""
-        page = FetchedPage(current, status, html, redirects)
+        page = FetchedPage(
+            current, status, html, redirects, headers=dict(headers) if headers else {}
+        )
         if self._ssl_fallback_used:
             page._ssl_fallback = True  # type: ignore[attr-defined]
         return page
