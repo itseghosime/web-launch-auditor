@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Instrument_Sans } from "next/font/google";
+import { JetBrains_Mono, Lato } from "next/font/google";
 import "./globals.css";
+import "./launch.css";
 
-const sans = Instrument_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const sans = Lato({ subsets: ["latin"], weight: ["400", "700", "900"], variable: "--font-sans", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Web Launch Auditor — Pre-Flight Mission Control",
-  description: "Strap your URL into the wind tunnel before the internet finds your broken links.",
+  title: "Launch Auditor — Launch with confidence",
+  description: "Catch missing metadata, preview social cards, inspect launch leaks, and get actionable fixes before you launch.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
