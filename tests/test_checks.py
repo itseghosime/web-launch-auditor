@@ -165,6 +165,7 @@ def test_social_preview_survives_serialization(good_html):
 
 def test_social_preview_defaults_to_none_without_og_tags(broken_html):
     assert inspect_html(broken_html, PAGE).social_preview is not None
-    assert json.loads(to_json(inspect_html(broken_html, PAGE)))["social_preview"][
-        "image"
-    ] == ""
+    assert (
+        json.loads(to_json(inspect_html(broken_html, PAGE)))["social_preview"]["image"]
+        == ""
+    )
