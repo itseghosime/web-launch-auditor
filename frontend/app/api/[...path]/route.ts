@@ -66,7 +66,7 @@ async function proxy(request: NextRequest, context: Context) {
       headers.set("Content-Type", "application/json");
     }
     const base = (process.env.AUDITOR_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
-    const upstream = await fetch(`${base}/api/${path.join("/")}`, { method, headers, body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15000) });
+    const upstream = await fetch(`${base}/api/${path.join("/")}`, { method, headers, body, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(45000) });
     const contentType = upstream.headers.get("content-type") || (path[2] === "badge.svg" ? "image/svg+xml" : "application/json");
     const responseHeaders = new Headers({ "Content-Type": contentType, "Cache-Control": "no-store" });
     for (const cookie of upstream.headers.getSetCookie()) responseHeaders.append("Set-Cookie", cookie);

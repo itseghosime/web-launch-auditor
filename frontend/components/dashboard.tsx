@@ -294,7 +294,7 @@ export default function Dashboard() {
   const detailSequence = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const hasActiveScan = scans.some(active);
+  const hasActiveScan = scans.some(active) || Boolean(selected && active(selected));
   const isActive = hasActiveScan;
   const isIdle = !isActive && !selected;
 
@@ -358,7 +358,8 @@ export default function Dashboard() {
   }, [refresh]);
 
   useEffect(() => {
-    if (!scans.some(active)) return;
+    const isAnyActive = scans.some(active) || Boolean(selected && active(selected));
+    if (!isAnyActive) return;
     let stopped = false;
     const timer = setInterval(async () => {
       try {
@@ -380,7 +381,7 @@ export default function Dashboard() {
       stopped = true;
       clearInterval(timer);
     };
-  }, [scans, refresh]);
+  }, [scans, selected, refresh]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -703,10 +704,13 @@ export default function Dashboard() {
   const armedCount = Object.values(inspectors).filter(Boolean).length;
   const urlValid = isValidUrl(url.trim());
   const currentScan = activeScan ?? selected;
+  const isPendingScan = currentScan?.status === "queued" || currentScan?.status === "running";
 
   const computedScore = currentScan
     ? currentScan.status === "failed"
       ? 0
+      : isPendingScan
+      ? null
       : currentScan.score ?? Math.max(38, 100 - findings.length * 9 - pageErrors.length * 16)
     : 100;
 
@@ -728,7 +732,7 @@ export default function Dashboard() {
   const newOrRemainingRules = Array.from(currentRuleSet);
 
   const prevScoreVal = previousScan ? (previousScan.score ?? 50) : null;
-  const deltaScore = prevScoreVal !== null ? computedScore - prevScoreVal : null;
+  const deltaScore = (!isPendingScan && prevScoreVal !== null && computedScore !== null) ? computedScore - prevScoreVal : null;
 
   const isLocalRelay = Boolean(
     currentScan?.source === "relay" ||
@@ -1276,7 +1280,25 @@ export default function Dashboard() {
               </motion.div>
 
               <div className="network-caption"><span className="led-dot emerald" /><span>{isActive ? "DISCOVERING YOUR SITE" : "YOUR SITE, CONNECTED"}</span><p>{isActive ? "Pages appear as your audit progresses." : "Select a page to explore its preview and page details."}</p></div>
-              <div className="network-page-selector"><label htmlFor="network-page">Inspect page</label><select id="network-page" value={selectedNode || currentScan?.pages?.[0]?.page_url || ""} onChange={(e) => { setSelectedNode(e.target.value); setResultView("social"); }}><option value="" disabled>Discovering pages…</option>{(currentScan?.pages ?? []).map((page, i) => <option key={`${page.page_url}-${i}`} value={page.page_url}>{pathOf(page.page_url)}</option>)}</select></div>
+              {(currentScan?.pages ?? []).length > 1 && (
+                <div className="network-page-selector">
+                  <label htmlFor="network-page">Inspect page</label>
+                  <select
+                    id="network-page"
+                    value={selectedNode || currentScan?.pages?.[0]?.page_url || ""}
+                    onChange={(e) => {
+                      setSelectedNode(e.target.value);
+                      setResultView("social");
+                    }}
+                  >
+                    {(currentScan?.pages ?? []).map((page, i) => (
+                      <option key={`${page.page_url}-${i}`} value={page.page_url}>
+                        {pathOf(page.page_url)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {/* Floating Right-Hand Smoked-Glass Inspector Deck */}
               <motion.aside
                 initial={{ opacity: 0, x: 28 }}
@@ -1483,12 +1505,18 @@ export default function Dashboard() {
                         >
                           <span
                             className={`led-dot ${
-                              findings.length === 0 ? "emerald" : "silver"
+                              isPendingScan
+                                ? "silver"
+                                : findings.length === 0
+                                ? "emerald"
+                                : "silver"
                             }`}
                             aria-hidden="true"
                           />
                           <span>
-                            {findings.length === 0
+                            {isPendingScan
+                              ? "Analyzing Telemetry…"
+                              : findings.length === 0
                               ? "Cleared for Launch"
                               : `${findings.length} Telemetry Anomalies`}
                           </span>
@@ -1501,7 +1529,11 @@ export default function Dashboard() {
                             <Layers size={12} className="text-cyan-400" />
                             <span className="text-slate-400">FRAMEWORK:</span>
                             <span className="text-white font-semibold">
-                              {!currentScan?.stack || currentScan.stack.toLowerCase() === "html" ? "Not identified" : stackDisplayName(currentScan.stack)}
+                              {isPendingScan
+                                ? "Detecting…"
+                                : !currentScan?.stack || currentScan.stack.toLowerCase() === "html"
+                                ? "Not identified"
+                                : stackDisplayName(currentScan.stack)}
                             </span>
                           </span>
                         </div>
@@ -1520,7 +1552,7 @@ export default function Dashboard() {
                             className="text-3xl font-bold text-white tracking-tight"
                             style={{ lineHeight: 1 }}
                           >
-                            {computedScore}
+                            {isPendingScan ? "--" : computedScore}
                           </span>
                           <span
                             style={{
@@ -1534,16 +1566,20 @@ export default function Dashboard() {
                         </div>
                         <span
                           className={`manifest-health-pill ${
-                            computedScore >= 85
+                            isPendingScan
+                              ? "silver"
+                              : computedScore !== null && computedScore >= 85
                               ? "emerald"
-                              : computedScore >= 60
+                              : computedScore !== null && computedScore >= 60
                               ? "amber"
                               : "rose"
                           }`}
                         >
-                          {computedScore >= 85
+                          {isPendingScan
+                            ? "AUDITING"
+                            : computedScore !== null && computedScore >= 85
                             ? "EXCELLENT"
-                            : computedScore >= 60
+                            : computedScore !== null && computedScore >= 60
                             ? "ATTENTION"
                             : "CRITICAL"}
                         </span>
