@@ -256,6 +256,47 @@ def create_app(db_path=None, crawl_fn=None, start_worker=True):
             },
         )
 
+    @application.post("/api/scans/{scan_id}/share", status_code=201)
+    def share(scan_id: str, request: Request):
+        scan = owned_scan(request, scan_id)
+        if scan.get("status") != "completed":
+            raise HTTPException(409, "Scan must be completed before sharing")
+        if (scan.get("score") or 0) < 70:
+            raise HTTPException(400, "Score below share threshold")
+        token, expires = request.app.state.storage.create_report(scan_id, scan, 90)
+        return {
+            "report_id": token,
+            "share_url": f"/r/{token}",
+            "badge_url": f"/api/reports/{token}/badge.svg",
+        }
+
+    @application.get("/api/reports/{report_id}")
+    def get_report(report_id: str, request: Request):
+        rep = request.app.state.storage.get_report(report_id)
+        if rep is None:
+            raise HTTPException(404, "Report not found")
+        return rep["scan_snapshot"]
+
+    @application.get("/api/reports/{report_id}/badge.svg")
+    def badge(report_id: str, request: Request):
+        rep = request.app.state.storage.get_report(report_id)
+        if rep is None:
+            raise HTTPException(404, "Report not found")
+        score = rep["score"]
+        status = "VERIFIED" if score >= 90 else "READY"
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40">'
+            '<rect width="200" height="40" fill="#111"/>'
+            f'<text x="10" y="25" fill="#fff" font-size="12">LAUNCH AUDITOR</text>'
+            f'<text x="120" y="25" fill="#34d399" font-size="12">{score}/100 {status}</text>'
+            "</svg>"
+        )
+        return Response(
+            svg,
+            media_type="image/svg+xml",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
     return application
 
 

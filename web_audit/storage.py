@@ -45,6 +45,10 @@ class Storage:
                 except sqlite3.OperationalError:
                     pass
             db.execute("CREATE INDEX IF NOT EXISTS scan_owner ON scans(owner)")
+            db.execute("""CREATE TABLE IF NOT EXISTS reports (
+                id TEXT PRIMARY KEY, url TEXT NOT NULL, score INTEGER NOT NULL,
+                stack TEXT NOT NULL, scan_snapshot TEXT NOT NULL,
+                created_at TEXT NOT NULL, expires_at TEXT NOT NULL)""")
             db.execute(
                 "CREATE TABLE IF NOT EXISTS admissions (created_at REAL NOT NULL)"
             )
@@ -144,6 +148,56 @@ class Storage:
                 ),
             )
         return self.get(scan_id, owner)
+
+    def create_report(self, scan_id_owner, scan, expires_days=90):
+        import secrets
+        from datetime import timedelta
+
+        token = secrets.token_urlsafe(16)
+        snapshot = {k: v for k, v in scan.items() if k not in {"owner"}}
+        snapshot.pop("owner", None)
+        now_ts = now()
+        expires = (
+            __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+            + timedelta(days=expires_days)
+        ).isoformat()
+        with self.connect() as db:
+            db.execute(
+                """INSERT INTO reports (id,url,score,stack,scan_snapshot,created_at,expires_at)
+                VALUES (?,?,?,?,?,?,?)""",
+                (
+                    token,
+                    scan["url"],
+                    scan.get("score", 0),
+                    scan.get("stack", "html"),
+                    json.dumps(snapshot),
+                    now_ts,
+                    expires,
+                ),
+            )
+        return token, expires
+
+    def get_report(self, report_id):
+        with self.connect() as db:
+            row = db.execute(
+                "SELECT * FROM reports WHERE id=?", (report_id,)
+            ).fetchone()
+        if not row:
+            return None
+        rowd = dict(row)
+        # expiry check
+        from datetime import datetime, timezone
+
+        try:
+            expires = datetime.fromisoformat(rowd["expires_at"])
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expires:
+                return None
+        except ValueError:
+            pass
+        rowd["scan_snapshot"] = json.loads(rowd["scan_snapshot"])
+        return rowd
 
     def delete(self, scan_id, owner):
         with self.connect() as db:

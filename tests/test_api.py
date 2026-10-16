@@ -101,6 +101,45 @@ def test_optional_api_key(client, monkeypatch):
     assert client.get("/health").status_code == 200
 
 
+def test_analyze_raw_html_single_page(client):
+    payload = {
+        "url": "http://localhost:3000",
+        "pages": [
+            {
+                "url": "http://localhost:3000/",
+                "status": 200,
+                "html": "<html><head><title>T</title></head><body>ok</body></html>",
+            }
+        ],
+    }
+    response = client.post("/api/analyze-raw-html", json=payload)
+    assert response.status_code == 201
+    scan = response.json()
+    assert scan["status"] == "completed"
+    assert scan["source"] == "relay"
+
+
+def test_analyze_raw_html_oversized_rejected(client):
+    html = "<html><body>" + ("x" * 1_000_001) + "</body></html>"
+    payload = {
+        "url": "http://localhost:3000",
+        "pages": [{"url": "http://localhost:3000/", "status": 200, "html": html}],
+    }
+    response = client.post("/api/analyze-raw-html", json=payload)
+    assert response.status_code in (413, 422)
+
+
+def test_analyze_raw_html_non_html_rejected(client):
+    payload = {
+        "url": "http://localhost:3000",
+        "pages": [
+            {"url": "http://localhost:3000/", "status": 200, "html": "binary\x00data"}
+        ],
+    }
+    response = client.post("/api/analyze-raw-html", json=payload)
+    assert response.status_code in (400, 422)
+
+
 def test_oversized_body_is_rejected_before_json_parsing(tmp_path):
     with TestClient(
         create_app(tmp_path / "limit.sqlite", start_worker=False)
