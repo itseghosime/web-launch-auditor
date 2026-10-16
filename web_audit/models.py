@@ -37,4 +37,5 @@ class ScanReport:
     findings: list[Finding] = field(default_factory=list)
     internal_links: list[str] = field(default_factory=list)
     redirects: list[Redirect] = field(default_factory=list)
+    social_preview: dict | None = None
     schema_version: str = "0.2"

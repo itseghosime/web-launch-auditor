@@ -148,3 +148,23 @@ def test_json_round_trip_and_text(good_html):
     assert data["status_code"] is None
     assert data["findings"] == []
     assert "Internal links discovered (not fetched): 2" in to_text(report)
+
+
+def test_social_preview_survives_serialization(good_html):
+    # asdict() only walks declared fields, so social_preview must be one or the
+    # crawler drops it and the UI wrongly reports a missing og:image.
+    report = inspect_html(good_html, PAGE)
+    data = json.loads(to_json(report))
+    assert data["social_preview"] == {
+        "title": "Example Studio",
+        "description": "Websites for small teams.",
+        "image": "https://example.com/social.png",
+        "site_name": "",
+    }
+
+
+def test_social_preview_defaults_to_none_without_og_tags(broken_html):
+    assert inspect_html(broken_html, PAGE).social_preview is not None
+    assert json.loads(to_json(inspect_html(broken_html, PAGE)))["social_preview"][
+        "image"
+    ] == ""
