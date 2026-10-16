@@ -773,7 +773,7 @@ export default function Dashboard() {
 
   return (
     <MotionConfig reducedMotion="user">
-    <div className={`obsidian-root launch-workspace ${isIdle ? "is-idle" : "is-results"} ${isActive ? "is-scanning" : ""}`} >
+    <div className={`obsidian-root launch-workspace ${isIdle ? "is-idle" : "is-results"} ${(isActive || isPendingScan) ? "is-scanning" : ""}`} >
       <a href="#main" className="skip-link">
         Skip to content
       </a>
@@ -1190,7 +1190,7 @@ export default function Dashboard() {
                     className={`led-dot ${
                       currentScan?.status === "failed"
                         ? "rose"
-                        : isActive
+                        : (isActive || isPendingScan)
                         ? "silver"
                         : "emerald"
                     }`}
@@ -1200,7 +1200,7 @@ export default function Dashboard() {
                     {currentScan ? hostOf(currentScan.url) : "TELEMETRY"}
                   </strong>
                   <span style={{ color: "#52525B" }}>//</span>
-                  {isActive ? (
+                  {(isActive || isPendingScan) ? (
                     <span
                       style={{
                         color: "#D4D4D8",
@@ -1307,7 +1307,7 @@ export default function Dashboard() {
                 aria-label="Telemetry Inspector Deck"
                 className="floating-right-inspector-deck w-full max-w-[420px] mr-6 my-auto bg-[#0A0B0E]/85 backdrop-blur-2xl border border-white/[0.08] rounded-2xl p-6 z-20 shadow-2xl"
               >
-                {isActive ? (
+                {(isActive || isPendingScan) ? (
                   <div className="live-scan-panel"
                   >
                     <div
