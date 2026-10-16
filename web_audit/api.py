@@ -141,6 +141,15 @@ def create_app(db_path=None, crawl_fn=None, start_worker=True):
             return response
         return await call_next(request)
 
+    @application.get("/")
+    def root():
+        return {
+            "name": "Web Launch Auditor API",
+            "status": "online",
+            "health": "/health",
+            "docs": "/docs",
+        }
+
     @application.get("/health")
     def health():
         return {"status": "ok"}

@@ -20,6 +20,12 @@ def client(tmp_path, monkeypatch):
 
 
 def test_complete_lifecycle(client):
+    assert client.get("/").json() == {
+        "name": "Web Launch Auditor API",
+        "status": "online",
+        "health": "/health",
+        "docs": "/docs",
+    }
     assert client.get("/health").json() == {"status": "ok"}
     response = client.post("/api/scans", json={"url": "https://example.com"})
     assert response.status_code == 202
