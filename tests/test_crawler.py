@@ -135,22 +135,25 @@ def test_deadline_stops_work():
     assert result == {"pages": [], "stop_reason": "deadline"}
 
 
-def test_robots_disallow_blocks_page(monkeypatch):
+def test_robots_disallow_is_non_blocking(monkeypatch):
     import web_audit.crawler as module
 
     class FakeFetcher:
         def __init__(self, deadline):
-            pass
+            self.allowed = None
 
         def resource(self, url):
             return url, 200, {}, b"User-agent: *\nDisallow: /", []
 
         def __call__(self, url):
-            pytest.fail("disallowed page fetched")
+            from web_audit.models import FetchedPage
+
+            return FetchedPage(url, 200, "<html><head><title>T</title></head></html>")
 
     monkeypatch.setattr(module, "PublicFetcher", FakeFetcher)
     result = crawl("https://example.com")
-    assert "robots.txt" in result["pages"][0]["error"]
+    assert result["pages"][0]["error"] is None
+    assert any(f["rule"] == "robots_disallow" for f in result["pages"][0]["findings"])
 
 
 def test_robots_policy_applies_before_redirect_request(monkeypatch):
@@ -220,3 +223,59 @@ def test_watchdog_interrupts_slow_headers(monkeypatch):
     monkeypatch.setattr(module.http.client, "HTTPConnection", FakeConnection)
     with pytest.raises(OSError, match="watchdog"):
         PublicFetcher(time.monotonic() + 0.02).request("http://example.com/")
+
+
+def test_ssl_cert_verification_fallback_records_finding():
+    import ssl
+
+    from web_audit.models import FetchedPage
+
+    attempts = []
+
+    def fetch(url):
+        attempts.append(url)
+        if len(attempts) == 1:
+            raise ssl.SSLCertVerificationError(
+                "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1082)"
+            )
+        return FetchedPage(
+            url, 200, "<html><head><title>T</title></head><body>OK</body></html>"
+        )
+
+    res = crawl("https://example.com", fetcher=fetch, delay=0)
+    assert len(res["pages"]) == 1
+    page = res["pages"][0]
+    assert page["error"] is None
+    assert any(f["rule"] == "ssl_unverified_fallback" for f in page["findings"])
+
+
+def test_canonical_origin_redirect_crawls_landing_host():
+    from web_audit.models import FetchedPage, Redirect
+
+    crawled = []
+
+    def fetch(url):
+        crawled.append(url)
+        if url == "https://example.com/":
+            return FetchedPage(
+                "https://www.example.com/",
+                200,
+                '<html><head><title>Home</title></head><body><a href="/about">About</a></body></html>',
+                redirects=[
+                    Redirect("https://example.com/", 301, "https://www.example.com/")
+                ],
+            )
+        elif url == "https://www.example.com/about":
+            return FetchedPage(
+                "https://www.example.com/about",
+                200,
+                "<html><head><title>About</title></head><body>About Us</body></html>",
+            )
+        raise ValueError(f"Unexpected url {url}")
+
+    res = crawl("https://example.com", max_pages=3, max_depth=1, fetcher=fetch, delay=0)
+    assert len(res["pages"]) == 2
+    assert res["pages"][0]["page_url"] == "https://www.example.com/"
+    assert res["pages"][1]["page_url"] == "https://www.example.com/about"
+    assert res["pages"][0]["error"] is None
+    assert res["pages"][1]["error"] is None

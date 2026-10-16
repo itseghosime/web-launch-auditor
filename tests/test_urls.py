@@ -1,6 +1,11 @@
 import pytest
 
-from web_audit.urls import normalize_url, resolve_url, same_origin
+from web_audit.urls import (
+    is_canonical_origin_redirect,
+    normalize_url,
+    resolve_url,
+    same_origin,
+)
 
 
 @pytest.mark.parametrize(
@@ -56,3 +61,19 @@ def test_relative_resolution():
 )
 def test_origin(other, expected):
     assert same_origin("https://example.com", other) is expected
+
+
+@pytest.mark.parametrize(
+    "start,target,expected",
+    [
+        ("https://example.com", "https://example.com/about", True),
+        ("https://example.com", "https://www.example.com/", True),
+        ("https://www.example.com", "https://example.com/", True),
+        ("http://example.com", "https://example.com/", True),
+        ("http://example.com", "https://www.example.com/", True),
+        ("https://example.com", "https://other.com/", False),
+        ("https://example.com", "https://sub.example.com/", False),
+    ],
+)
+def test_canonical_origin_redirect(start, target, expected):
+    assert is_canonical_origin_redirect(start, target) is expected
